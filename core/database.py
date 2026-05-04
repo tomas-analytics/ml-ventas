@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS ventas (
     billing_address      VARCHAR,
     vat_condition        VARCHAR,
     buyer_name           VARCHAR,
-    buyer_dni            BIGINT,
+    buyer_dni            VARCHAR,
     buyer_address        VARCHAR,
     buyer_city           VARCHAR,
     buyer_province       VARCHAR,

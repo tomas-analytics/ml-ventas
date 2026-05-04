@@ -112,6 +112,77 @@ def _fix_text(value: object) -> object:
         return value
 
 
+def _clean_text(value: object) -> str | None:
+    """Limpia un valor de texto: fix encoding, strip, vacío→None.
+    MercadoLibre usa ' ' (espacio) para indicar campos sin dato."""
+    value = _fix_text(value)
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _parse_billing_month(value: object) -> date | None:
+    """Parsea el mes de facturación.
+    Acepta 'abril 2026' (export real ML) o formatos estándar (datos sintéticos)."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    s = str(value).strip().lower()
+    if not s:
+        return None
+    m = re.match(r"(\w+)\s+(\d{4})", s)
+    if m:
+        month_name, year = m.group(1), int(m.group(2))
+        month = _MONTHS_ES.get(month_name)
+        if month:
+            try:
+                return date(year, month, 1)
+            except ValueError:
+                pass
+    parsed = pd.to_datetime(value, errors="coerce")
+    return parsed.date() if pd.notna(parsed) else None
+
+
+def _parse_event_date(value: object, reference_year: int | None = None) -> date | None:
+    """Parsea fechas de eventos del export de ML.
+
+    Formatos soportados:
+    - "22 de abril de 2026 01:48 hs." (full)
+    - "22 de abril | 01:48"           (sin año, se infiere de reference_year)
+    - "22 de abril"                   (sin año ni hora)
+    """
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    if isinstance(value, (date, pd.Timestamp)):
+        return value.date() if hasattr(value, "date") else value
+    s = str(value).strip()
+    if not s:
+        return None
+    s_lower = s.lower()
+    # Formato completo con año
+    m = re.match(r"(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})", s_lower)
+    if m:
+        day, month_name, year = int(m.group(1)), m.group(2), int(m.group(3))
+        month = _MONTHS_ES.get(month_name)
+        if month:
+            try:
+                return date(year, month, day)
+            except ValueError:
+                pass
+    # Formato corto sin año: "22 de abril | 01:48" o "22 de abril"
+    m = re.match(r"(\d{1,2})\s+de\s+(\w+)", s_lower)
+    if m:
+        day, month_name = int(m.group(1)), m.group(2)
+        month = _MONTHS_ES.get(month_name)
+        year = reference_year or date.today().year
+        if month:
+            try:
+                return date(year, month, day)
+            except ValueError:
+                pass
+    return None
+
+
 def _parse_spanish_date(value: object) -> date | None:
     """Convierte '21 de mayo de 2026 00:00 hs.' en un objeto date."""
     if value is None or (isinstance(value, float) and pd.isna(value)):
@@ -225,7 +296,7 @@ def parse_excel(source: Union[str, Path, BytesIO]) -> pd.DataFrame:
     data["sale_date"] = data["sale_date"].apply(_parse_spanish_date)
 
     if "billing_month" in data.columns:
-        data["billing_month"] = pd.to_datetime(data["billing_month"], errors="coerce").dt.date
+        data["billing_month"] = data["billing_month"].apply(_parse_billing_month)
 
     # Columnas numéricas
     numeric_cols = [
@@ -244,15 +315,31 @@ def parse_excel(source: Union[str, Path, BytesIO]) -> pd.DataFrame:
             )
             data[col] = pd.to_numeric(cleaned, errors="coerce")
 
-    # Texto: fix encoding + strip
+    # Fechas de eventos de envío/devolución
+    # El export real de ML usa formato corto "22 de abril | 01:48" sin año
+    event_date_cols = [
+        "shipped_at", "delivered_at",
+        "return_shipped_at", "return_delivered_at", "return_reviewed_at",
+    ]
+    ref_years = data["sale_date"].apply(
+        lambda d: d.year if isinstance(d, date) else None
+    )
+    for col in event_date_cols:
+        if col in data.columns:
+            data[col] = [
+                _parse_event_date(val, ref_year)
+                for val, ref_year in zip(data[col], ref_years)
+            ]
+
+    # Texto: fix encoding + strip + vacío→None
+    # MercadoLibre usa ' ' (espacio) como placeholder en celdas sin dato
     text_cols = [
         c for c in data.columns
-        if c not in numeric_cols + ["sale_id", "sale_date", "billing_month"]
+        if c not in numeric_cols + ["sale_id", "sale_date", "billing_month"] + event_date_cols
     ]
     for col in text_cols:
         if col in data.columns:
-            data[col] = data[col].apply(_fix_text)
-            data[col] = data[col].where(data[col].notna(), None)
+            data[col] = data[col].apply(_clean_text)
 
     # Limpieza de filas sin fecha válida
     initial_count = len(data)
