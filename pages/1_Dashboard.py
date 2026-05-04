@@ -122,6 +122,15 @@ with st.sidebar:
         key="filter_province",
     )
 
+    # Producto
+    selected_products = st.multiselect(
+        "Producto",
+        options=opts["products"],
+        default=[],
+        placeholder="Todos",
+        key="filter_product",
+    )
+
     st.divider()
 
     # Granularidad del gráfico temporal
@@ -149,6 +158,8 @@ if selected_statuses:
     filters["status"] = selected_statuses
 if selected_provinces:
     filters["province"] = selected_provinces
+if selected_products:
+    filters["product"] = selected_products
 
 # ── Header ────────────────────────────────────────────────────────────────────
 
@@ -218,10 +229,21 @@ col_c.metric(
 # ── Gráfico temporal ──────────────────────────────────────────────────────────
 
 st.divider()
-st.markdown('<p class="section-title">Evolución temporal</p>', unsafe_allow_html=True)
+col_title, col_metric = st.columns([3, 2])
+with col_title:
+    st.markdown('<p class="section-title">Evolución temporal</p>', unsafe_allow_html=True)
+with col_metric:
+    time_metric = st.radio(
+        "Métrica",
+        options=["revenue", "units", "count"],
+        format_func=lambda x: {"revenue": "Ingresos netos", "units": "Unidades", "count": "Cant. ventas"}[x],
+        horizontal=True,
+        key="filter_time_metric",
+        label_visibility="collapsed",
+    )
 
 df_time = get_revenue_over_time(conn, filters, granularity)
-st.plotly_chart(revenue_over_time(df_time, granularity), use_container_width=True)
+st.plotly_chart(revenue_over_time(df_time, granularity, time_metric), use_container_width=True)
 
 # ── Estado + Día de semana ────────────────────────────────────────────────────
 

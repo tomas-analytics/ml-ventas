@@ -68,6 +68,12 @@ with st.sidebar:
         default=[],
         placeholder="Todas",
     )
+    selected_products = st.multiselect(
+        "Producto",
+        options=opts["products"],
+        default=[],
+        placeholder="Todos",
+    )
 
     st.divider()
 
@@ -86,6 +92,8 @@ if date_from:
     filters["date_from"] = date_from
 if date_to:
     filters["date_to"] = date_to
+if selected_products:
+    filters["product"] = selected_products
 if selected_statuses:
     filters["status"] = selected_statuses
 if selected_provinces:

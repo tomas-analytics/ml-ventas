@@ -64,35 +64,51 @@ def _fmt_ars(value: float) -> str:
 
 # ── Revenue en el tiempo ──────────────────────────────────────────────────────
 
-def revenue_over_time(df: pd.DataFrame, granularity: str = "day") -> go.Figure:
+def revenue_over_time(df: pd.DataFrame, granularity: str = "day", metric: str = "revenue") -> go.Figure:
     if df.empty:
         return _empty_chart("Sin datos para el período seleccionado")
 
+    period_label = {"day": "por día", "week": "por semana", "month": "por mes"}.get(granularity, "")
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(
-        x=df["periodo"],
-        y=df["ingresos_brutos"],
-        name="Ingresos brutos",
-        line=dict(color=COLORS["blue"], width=2, dash="dot"),
-        fill=None,
-        hovertemplate="%{x}<br>Bruto: $%{y:,.0f}<extra></extra>",
-    ))
+    if metric == "revenue":
+        fig.add_trace(go.Scatter(
+            x=df["periodo"], y=df["ingresos_brutos"],
+            name="Ingresos brutos",
+            line=dict(color=COLORS["blue"], width=2, dash="dot"),
+            hovertemplate="%{x}<br>Bruto: $%{y:,.0f}<extra></extra>",
+        ))
+        fig.add_trace(go.Scatter(
+            x=df["periodo"], y=df["ingresos_netos"],
+            name="Ingresos netos",
+            line=dict(color=COLORS["yellow"], width=2.5),
+            fill="tozeroy", fillcolor="rgba(255,230,0,0.07)",
+            hovertemplate="%{x}<br>Neto: $%{y:,.0f}<extra></extra>",
+        ))
+        _apply_base(fig, f"Evolución de ingresos {period_label}")
+        fig.update_yaxes(tickprefix="$", tickformat=",.0f")
 
-    fig.add_trace(go.Scatter(
-        x=df["periodo"],
-        y=df["ingresos_netos"],
-        name="Ingresos netos",
-        line=dict(color=COLORS["yellow"], width=2.5),
-        fill="tozeroy",
-        fillcolor="rgba(255,230,0,0.07)",
-        hovertemplate="%{x}<br>Neto: $%{y:,.0f}<extra></extra>",
-    ))
+    elif metric == "units":
+        fig.add_trace(go.Bar(
+            x=df["periodo"], y=df["unidades"],
+            name="Unidades",
+            marker=dict(color=COLORS["blue"], opacity=0.85),
+            hovertemplate="%{x}<br>%{y:,} unidades<extra></extra>",
+        ))
+        _apply_base(fig, f"Unidades vendidas {period_label}")
+        fig.update_yaxes(tickformat=",")
 
-    label = {"day": "por día", "week": "por semana", "month": "por mes"}.get(granularity, "")
-    _apply_base(fig, f"Evolución de ingresos {label}")
+    elif metric == "count":
+        fig.add_trace(go.Bar(
+            x=df["periodo"], y=df["cantidad_ventas"],
+            name="Ventas",
+            marker=dict(color=COLORS["yellow"], opacity=0.85),
+            hovertemplate="%{x}<br>%{y:,} ventas<extra></extra>",
+        ))
+        _apply_base(fig, f"Cantidad de ventas {period_label}")
+        fig.update_yaxes(tickformat=",")
+
     fig.update_xaxes(tickformat="%d/%m/%y")
-    fig.update_yaxes(tickprefix="$", tickformat=",.0f")
     return fig
 
 
