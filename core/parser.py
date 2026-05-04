@@ -40,11 +40,14 @@ COLUMN_MAP: dict[str, str] = {
     "Pertenece a un kit":                                  "belongs_to_kit",
     "Unidades":                                            "quantity",
     "Ingresos por productos (ARS)":                        "product_revenue",
+    "Ingresos (ARS)":                                      "product_revenue",    # formato antiguo
     "Cargo por venta":                                     "sale_fee",
+    "Cargo por venta e impuestos":                         "sale_fee",           # formato antiguo (combinado)
     "Costo fijo":                                          "fixed_cost",
     "Costo por ofrecer cuotas":                            "installments_cost",
     "Ingresos por envío (ARS)":                            "shipping_revenue",
     "Costos de envío (ARS)":                               "shipping_cost",
+    "Costos de envío":                                     "shipping_cost",      # formato antiguo
     "Costo de envío basado en medidas y peso declarados":  "shipping_weight_cost",
     "Cargo por diferencias en medidas y peso del paquete": "shipping_size_diff",
     "Impuestos":                                           "taxes",
@@ -61,11 +64,13 @@ COLUMN_MAP: dict[str, str] = {
     "Precio unitario de venta de la publicación (ARS)":    "unit_price",
     "Tiene cuotas agregadas":                              "has_installments",
     "Factura adjunta":                                     "invoice_status",
+    "Facturación":                                         "invoice_status",     # formato antiguo
     "Datos personales o de empresa":                       "buyer_legal_name",
     "Tipo y número de documento":                          "buyer_document",
     "Dirección":                                           "billing_address",
     "Condición fiscal (IVA)":                              "vat_condition",
     "Comprador":                                           "buyer_name",
+    "Nombre del comprador":                                "buyer_name",         # formato antiguo
     "DNI":                                                 "buyer_dni",
     "Domicilio":                                           "buyer_address",
     "Ciudad":                                              "buyer_city",
@@ -98,7 +103,7 @@ COLUMN_MAP: dict[str, str] = {
 }
 
 # Columnas que deben existir para considerar el archivo válido
-REQUIRED_COLUMNS = {"sale_id", "sale_date", "status", "total_amount", "product_revenue"}
+REQUIRED_COLUMNS = {"sale_id", "sale_date", "status", "total_amount"}
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
